@@ -13,6 +13,8 @@ class Student(
     var firstName: String,
     var lastName: String,
     var email: String,
+    var password: String,
+    var role: String,
     var isActive: Boolean = true,
     var createdAt: OffsetDateTime = OffsetDateTime.now()
 )

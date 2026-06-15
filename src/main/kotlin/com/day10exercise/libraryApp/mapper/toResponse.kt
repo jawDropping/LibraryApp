@@ -38,7 +38,9 @@ fun CreateStudentRequest.toEntity(): Student =
     Student(
         firstName = firstName,
         lastName = lastName,
-        email = email
+        email = email,
+        password = password,
+        role = "STUDENT"
     )
 
 fun Books.toResponse(borrowedCopies: Int, overdueCopies: Int) : BookResponse =

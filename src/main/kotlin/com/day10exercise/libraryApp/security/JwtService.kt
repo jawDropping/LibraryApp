@@ -1,0 +1,46 @@
+package com.day10exercise.libraryApp.security
+
+import com.day10exercise.libraryApp.model.entity.Student
+import io.jsonwebtoken.Claims
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.security.Keys
+import org.springframework.stereotype.Service
+import java.util.*
+
+@Service
+class JwtService {
+
+    private val secret = "my-very-secret-key-change-this-in-production-123456"
+
+    private fun key() = Keys.hmacShaKeyFor(secret.toByteArray())
+
+    fun generateToken(student: Student): String {
+        return Jwts.builder()
+            .subject(student.email)
+            .claim("role", student.role)
+            .issuedAt(Date())
+            .expiration(Date(System.currentTimeMillis() + 1000 * 60 * 60))
+            .signWith(key())
+            .compact()
+    }
+
+    fun extractEmail(token: String): String {
+        return getClaims(token).subject
+    }
+
+    fun isValid(token: String, student: Student): Boolean {
+        return extractEmail(token) == student.email && !isExpired(token)
+    }
+
+    private fun isExpired(token: String): Boolean {
+        return getClaims(token).expiration.before(Date())
+    }
+
+    private fun getClaims(token: String): Claims {
+        return Jwts.parser()
+            .verifyWith(key())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload()
+    }
+}
