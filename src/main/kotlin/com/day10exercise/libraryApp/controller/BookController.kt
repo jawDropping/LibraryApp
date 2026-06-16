@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*
 import java.util.UUID
 
 @RestController
-@RequestMapping("/books")
+@RequestMapping("/api/v1/books")
 class BookController(
     private val bookService: BookService
 ) {

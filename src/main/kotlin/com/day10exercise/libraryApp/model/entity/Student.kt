@@ -10,11 +10,9 @@ class Student(
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     var id: UUID? = null,
-    var firstName: String,
-    var lastName: String,
-    var email: String,
-    var password: String,
-    var role: String,
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    var user : User,
     var isActive: Boolean = true,
     var createdAt: OffsetDateTime = OffsetDateTime.now()
 )

@@ -4,6 +4,7 @@ import com.day10exercise.libraryApp.model.entity.Student
 import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
+import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.stereotype.Service
 import java.util.*
 
@@ -14,10 +15,12 @@ class JwtService {
 
     private fun key() = Keys.hmacShaKeyFor(secret.toByteArray())
 
-    fun generateToken(student: Student): String {
+    fun generateToken(userDetails: UserDetails): String {
+        val roles = userDetails.authorities.map { it.authority }
+
         return Jwts.builder()
-            .subject(student.email)
-            .claim("role", student.role)
+            .subject(userDetails.username)
+            .claim("roles", roles)
             .issuedAt(Date())
             .expiration(Date(System.currentTimeMillis() + 1000 * 60 * 60))
             .signWith(key())
@@ -28,8 +31,9 @@ class JwtService {
         return getClaims(token).subject
     }
 
-    fun isValid(token: String, student: Student): Boolean {
-        return extractEmail(token) == student.email && !isExpired(token)
+    fun isValid(token: String, userDetails: UserDetails): Boolean {
+        val username = extractEmail(token)
+        return (username == userDetails.username) && !isExpired(token)
     }
 
     private fun isExpired(token: String): Boolean {
@@ -41,6 +45,6 @@ class JwtService {
             .verifyWith(key())
             .build()
             .parseSignedClaims(token)
-            .getPayload()
+            .payload
     }
 }

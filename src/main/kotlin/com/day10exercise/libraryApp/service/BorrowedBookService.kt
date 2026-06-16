@@ -40,7 +40,10 @@ class BorrowedBookService(
             throw BusinessException("Cannot borrow when only 1 copy remains")
         }
 
-        val borrowedBook = BorrowedBooks(student = student, book = book)
+        val borrowedBook = BorrowedBooks(
+            student = student,
+            book = book
+        )
         val saved = borrowedBookRepository.save(borrowedBook)
         return saved.toResponse()
     }

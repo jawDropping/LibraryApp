@@ -1,27 +1,33 @@
 package com.day10exercise.libraryApp.security
 
-import com.day10exercise.libraryApp.model.entity.Student
-import com.day10exercise.libraryApp.repository.StudentRepository
+import com.day10exercise.libraryApp.service.CustomUserDetailsService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.stereotype.Component
 import org.springframework.web.filter.OncePerRequestFilter
 
 @Component
 class JwtFilter(
     private val jwtService: JwtService,
-    private val studentRepository: StudentRepository
+    private val customUserDetailsService: CustomUserDetailsService
 ) : OncePerRequestFilter() {
+
+    // 1. Tell the filter to completely ignore your public endpoints
+    override fun shouldNotFilter(request: HttpServletRequest): Boolean {
+        val path = request.servletPath
+        return path.startsWith("/auth/") || path.startsWith("/auth/register/")
+    }
 
     override fun doFilterInternal(
         request: HttpServletRequest,
         response: HttpServletResponse,
         filterChain: FilterChain
     ) {
+        // 2. You can safely REMOVE the manual request.servletPath check from here now!
 
         val authHeader = request.getHeader("Authorization")
 
@@ -31,22 +37,29 @@ class JwtFilter(
         }
 
         val token = authHeader.substring(7)
-        val email = jwtService.extractEmail(token)
 
-        if (SecurityContextHolder.getContext().authentication == null) {
+        val email = try {
+            jwtService.extractEmail(token)
+        } catch (ex: Exception) {
+            filterChain.doFilter(request, response)
+            return
+        }
 
-            val student = studentRepository.findByEmail(email)
+        // 3. Robustness Check: Ensure email extraction actually succeeded
+        if (email != null && SecurityContextHolder.getContext().authentication == null) {
+            val userDetails = customUserDetailsService.loadUserByUsername(email)
 
-            if (student != null && jwtService.isValid(token, student)) {
+            // It's highly recommended to validate your token here (e.g., expiration check)
+            // if (jwtService.isTokenValid(token, userDetails)) { ... }
 
-                val auth = UsernamePasswordAuthenticationToken(
-                    student.email,
-                    null,
-                    listOf(SimpleGrantedAuthority("ROLE_${student.role}"))
-                )
+            val authentication = UsernamePasswordAuthenticationToken(
+                userDetails,
+                null,
+                userDetails.authorities // Pass actual roles/authorities instead of emptyList()
+            )
 
-                SecurityContextHolder.getContext().authentication = auth
-            }
+            authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
+            SecurityContextHolder.getContext().authentication = authentication
         }
 
         filterChain.doFilter(request, response)
